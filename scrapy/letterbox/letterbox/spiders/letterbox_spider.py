@@ -1,13 +1,12 @@
 import scrapy
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from scrapy.selector import Selector
 from ..items import LetterboxItem
 import time
+import json
+from pprint import pprint
 
 class LetterSpider(scrapy.Spider):
     name = "films"
@@ -49,8 +48,16 @@ class LetterSpider(scrapy.Spider):
             title = title.replace("\xa0", " ").strip()
 
         release_year = sel.xpath("//span[@class='releasedate']/a/text()").get()
-        rating = sel.xpath("//span[contains(@class, 'average-rating')]//a/text()").get().strip()
-        genres = sel.xpath("//div[@id='tab-genres']//div[@class='text-sluglist'][1]//a[@class='text-slug']/text()").getall()
+        # rating = sel.xpath("//span[contains(@class, 'average-rating')]//a/text()").get().strip()
+
+        script = sel.xpath("//script[contains(text(), 'genre')]/text()").get()
+        if script:
+            cleaned_script = script.replace("/* <![CDATA[ */", "").replace("/* ]]> */", "").strip()
+            json_data = json.loads(cleaned_script)
+            genres = json_data["genre"]
+            rating = json_data["aggregateRating"]["ratingValue"]
+        else:
+            print("================ NO Scripts Containing Genre ==============")
 
         item = LetterboxItem()
         item["film_name"] = title
