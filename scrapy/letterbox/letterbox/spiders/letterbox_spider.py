@@ -10,17 +10,32 @@ from pprint import pprint
 
 class LetterSpider(scrapy.Spider):
     name = "films"
-    FILMS_LIMIT = 0
+    FILMS_LIMIT = 200
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(LetterSpider, self).__init__(*args, **kwargs)
+
+        urls = kwargs.get('urls', None)
+
+        if urls:
+            self.urls = self.urls if isinstance(self.urls, list) else [self.urls]
+        else:
+            print("\nNo URLs provided, loading from default file...\n")
+            file_path = "urls_with_filmlists_letterbox.txt"
+            try:
+                with open(file_path, "r") as f:
+                    self.urls = [line.strip() for line in f if line.strip()]
+            except FileNotFoundError:
+                print(f"File not found: {file_path}")
+                self.urls = []
+
+
         options = webdriver.ChromeOptions()  # Set up Selenium Chrome driver
         options.add_argument("--headless") 
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     def start_requests(self):
-        urls = [
-            "https://letterboxd.com/munthxer/list/2025/"
-        ]
+        urls = self.urls
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse_list)
     
@@ -30,8 +45,8 @@ class LetterSpider(scrapy.Spider):
         sel = Selector(text=self.driver.page_source)
 
         film_links = sel.xpath("//div[@class='poster film-poster']/a/@href").getall()
-        if film_links and len(film_links) > 50:
-            film_links = film_links[:50]
+        if film_links and len(film_links) > self.FILMS_LIMIT:
+            film_links = film_links[:self.FILMS_LIMIT]
 
         for link in film_links:
             full_url = response.urljoin(link)
