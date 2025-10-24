@@ -10,17 +10,23 @@ from pprint import pprint
 
 class LetterSpider(scrapy.Spider):
     name = "films"
-    FILMS_LIMIT = 200
+    FILMS_LIMIT = 10
+    custom_settings = {
+        "ITEM_PIPELINES": {
+            'letterbox.pipelines.LetterboxPipeline': 300,
+        }
+    }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, sort_by=None, *args, **kwargs):
         super(LetterSpider, self).__init__(*args, **kwargs)
 
         urls = kwargs.get('urls', None)
+        self.sort_by = sort_by
 
         if urls:
             self.urls = self.urls if isinstance(self.urls, list) else [self.urls]
         else:
-            print("\nNo URLs provided, loading from default file...\n")
+            print("\n ==== No URLs provided, loading from default file... ==== \n")
             file_path = "urls_with_filmlists_letterbox.txt"
             try:
                 with open(file_path, "r") as f:
