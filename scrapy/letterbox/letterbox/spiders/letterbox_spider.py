@@ -13,7 +13,13 @@ class LetterSpider(scrapy.Spider):
     custom_settings = {
         "ITEM_PIPELINES": {
             'letterbox.pipelines.LetterboxPipeline': 300,
-        }
+        },
+        "AUTOTHROTTLE_ENABLED": True,
+        "AUTOTHROTTLE_START_DELAY": 1,
+        "AUTOTHROTTLE_MAX_DELAY": 10,
+        "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,
+        "RANDOMIZE_DOWNLOAD_DELAY": True,
+        "DOWNLOAD_DELAY": 2,
     }
 
     def __init__(self, sort_by=None, films_limit=None, *args, **kwargs):
@@ -37,6 +43,8 @@ class LetterSpider(scrapy.Spider):
 
 
         options = webdriver.ChromeOptions()  # Set up Selenium Chrome driver
+        prefs = {"profile.managed_default_content_settings.images": 2}
+        options.add_experimental_option("prefs", prefs)
         options.add_argument("--headless") 
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
@@ -112,7 +120,7 @@ class LetterSpider(scrapy.Spider):
                 self.logger.warning(f"No <script> containing genre found on {response.url}")
         except Exception as e:
             self.logger.error(f"Failed to parse film page {response.url}: {e}")
-            
+
         item = LetterboxItem()
         item["film_name"] = title
         item["film_year"] = release_year
