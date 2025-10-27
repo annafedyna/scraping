@@ -10,18 +10,18 @@ from pprint import pprint
 
 class LetterSpider(scrapy.Spider):
     name = "films"
-    FILMS_LIMIT = 10
     custom_settings = {
         "ITEM_PIPELINES": {
             'letterbox.pipelines.LetterboxPipeline': 300,
         }
     }
 
-    def __init__(self, sort_by=None, *args, **kwargs):
+    def __init__(self, sort_by=None, films_limit=None, *args, **kwargs):
         super(LetterSpider, self).__init__(*args, **kwargs)
 
         urls = kwargs.get('urls', None)
         self.sort_by = sort_by
+        self.films_limit = films_limit
 
         if urls:
             self.urls = self.urls if isinstance(self.urls, list) else [self.urls]
@@ -51,12 +51,22 @@ class LetterSpider(scrapy.Spider):
         sel = Selector(text=self.driver.page_source)
 
         film_links = sel.xpath("//div[@class='poster film-poster']/a/@href").getall()
-        if film_links and len(film_links) > self.FILMS_LIMIT:
-            film_links = film_links[:self.FILMS_LIMIT]
+        if self.films_limit and film_links and len(film_links) > self.films_limit:
+            film_links = film_links[:self.films_limit]
 
         for link in film_links:
             full_url = response.urljoin(link)
             yield scrapy.Request(url=full_url, callback=self.parse_film)
+
+        next_page = sel.xpath("//div[@class='paginate-nextprev']/a[@class='next']/@href").get()
+        page_number = next_page[-2]
+        if next_page:
+            full_next_page_url = response.urljoin(next_page)
+            print(f"============== Next Page Number: {page_number} ================")
+            yield scrapy.Request(
+                url=full_next_page_url,
+                callback=self.parse_list
+            )
 
     def parse_film(self, response):
         """ Collect film info """
